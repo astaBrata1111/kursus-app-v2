@@ -33,6 +33,7 @@ const adminNav: NavItemDef[] = [
     { href: '/admin/absensi', icon: <UserCheck size={20} />, label: 'Absensi' },
     { href: '/admin/paket', icon: <Package size={20} />, label: 'Paket Kursus' },
     { href: '/admin/laporan', icon: <BarChart2 size={20} />, label: 'Laporan' },
+    { href: '/admin/trials', icon: <TrendingUp size={20} />, label: 'Trial Funnel' },
     { href: '/admin/notifikasi', icon: <MessageSquare size={20} />, label: 'Notifikasi WA' },
     { href: '/admin/checklist', icon: <ClipboardList size={20} />, label: 'Checklist Harian' },
 ];
