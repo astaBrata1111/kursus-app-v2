@@ -43,23 +43,47 @@ export default function PengajarPage() {
         e.preventDefault();
         if (hariTerpilih.length === 0) return alert("Pilih minimal satu hari kerja!");
         const aliasArr = alias.split(",").map(a => a.trim()).filter(Boolean);
-        const { error } = await supabase.from("teachers").insert([{
-            nama, level, telepon, jam_mulai: jamMulai, jam_selesai: jamSelesai,
-            hari_kerja: hariTerpilih, alias: aliasArr,
-        }]);
-        if (!error) { setIsModalOpen(false); resetForm(); fetchTeachers(); }
-        else alert("Gagal: " + error.message);
+        try {
+            const { error } = await supabase.from("teachers").insert([{
+                nama, level, telepon, jam_mulai: jamMulai, jam_selesai: jamSelesai,
+                hari_kerja: hariTerpilih, alias: aliasArr,
+            }]);
+            if (error) throw error;
+            setIsModalOpen(false);
+            resetForm();
+        } catch (err: any) {
+            console.error("Insert error:", err);
+            alert("Gagal menambahkan pengajar:\n" + err.message);
+        } finally {
+            fetchTeachers();
+        }
     }
 
     async function handleUpdate(data: any) {
         const aliasArr = typeof data.alias === 'string'
             ? data.alias.split(",").map((a: string) => a.trim()).filter(Boolean) : data.alias;
-        await supabase.from("teachers").update({
+
+        const { error } = await supabase.from("teachers").update({
             nama: data.nama, telepon: data.telepon, level: data.level,
             jam_mulai: data.jam_mulai, jam_selesai: data.jam_selesai,
             hari_kerja: data.hari_kerja, alias: aliasArr,
         }).eq("id", data.id);
+
+        if (error) throw error;
         fetchTeachers();
+    }
+
+    async function handleDelete(id: string) {
+        if (!confirm("Hapus pengajar?")) return;
+        try {
+            const { error } = await supabase.from("teachers").delete().eq("id", id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error("Delete error:", err);
+            alert("Gagal menghapus pengajar:\n" + err.message);
+        } finally {
+            fetchTeachers();
+        }
     }
 
     function resetForm() {
@@ -76,7 +100,7 @@ export default function PengajarPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                     <h1 className="flex items-center gap-2" style={{ fontWeight: 900, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#3B82F6' }}>
@@ -88,7 +112,7 @@ export default function PengajarPage() {
                         {teachers.length} pengajar terdaftar
                     </p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+                <button onClick={() => setIsModalOpen(true)} className="btn-primary self-start">
                     <Plus size={18} /> Tambah Pengajar
                 </button>
             </div>
@@ -114,7 +138,7 @@ export default function PengajarPage() {
                             <div className="flex gap-1">
                                 <button onClick={() => { setSelectedTeacher({ ...t, alias: t.alias?.join(", ") || "" }); setIsEditModalOpen(true); }}
                                     className="p-1.5 rounded-lg" style={{ color: 'var(--info)' }}><Pencil size={15} /></button>
-                                <button onClick={async () => { if (confirm("Hapus pengajar?")) { await supabase.from("teachers").delete().eq("id", t.id); fetchTeachers(); } }}
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(t.id); }}
                                     className="p-1.5 rounded-lg" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                             </div>
                         </div>

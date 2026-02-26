@@ -13,7 +13,7 @@ export default function PaketPage() {
     const [formError, setFormError] = useState('');
 
     const [form, setForm] = useState({
-        nama: '', harga: 500000, jumlah_sesi: 8, deskripsi: '', is_active: true,
+        nama: '', harga: 1000000, jumlah_sesi: 8, deskripsi: '', is_active: true,
     });
 
     useEffect(() => { fetchPakets(); }, []);
@@ -64,8 +64,7 @@ export default function PaketPage() {
 
     return (
         <div className="space-y-6">
-            {/* Page header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                     <h1 className="flex items-center gap-2" style={{ fontWeight: 900, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#F97316' }}>
@@ -77,7 +76,7 @@ export default function PaketPage() {
                         Kelola paket kursus dan harga yang tersedia
                     </p>
                 </div>
-                <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
+                <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary self-start">
                     <Plus size={18} /> Tambah Paket
                 </button>
             </div>

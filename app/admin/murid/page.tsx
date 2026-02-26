@@ -41,16 +41,39 @@ export default function MuridPage() {
         setLoading(false);
     }
 
+    async function handleDelete(id: string) {
+        if (!confirm('Hapus murid ini?')) return;
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('students').delete().eq('id', id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error("Delete error:", err);
+            alert("Gagal menghapus murid:\n" + err.message);
+        } finally {
+            fetchStudents();
+        }
+    }
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         const payload = { ...formData };
-        if (editingStudent) {
-            await supabase.from("students").update(payload).eq("id", editingStudent.id);
-        } else {
-            await supabase.from("students").insert([{ ...payload, tanggal_daftar: new Date().toISOString().split('T')[0] }]);
+        try {
+            if (editingStudent) {
+                const { error } = await supabase.from("students").update(payload).eq("id", editingStudent.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from("students").insert([{ ...payload, tanggal_daftar: new Date().toISOString().split('T')[0] }]);
+                if (error) throw error;
+            }
+            closeModal();
+        } catch (err: any) {
+            console.error("Save error:", err);
+            alert("Gagal menyimpan data:\n" + err.message);
+        } finally {
+            fetchStudents();
         }
-        closeModal(); fetchStudents();
     };
 
     const closeModal = () => {
@@ -70,9 +93,17 @@ export default function MuridPage() {
     };
 
     const handleBulkDelete = async () => {
-        if (confirm(`Hapus ${selectedIds.size} murid?`)) {
-            await supabase.from("students").delete().in("id", Array.from(selectedIds));
-            setSelectedIds(new Set()); fetchStudents();
+        if (!confirm(`Hapus ${selectedIds.size} murid?`)) return;
+        setLoading(true);
+        try {
+            const { error } = await supabase.from("students").delete().in("id", Array.from(selectedIds));
+            if (error) throw error;
+            setSelectedIds(new Set());
+        } catch (err: any) {
+            console.error("Bulk delete error:", err);
+            alert("Gagal menghapus murid:\n" + err.message);
+        } finally {
+            fetchStudents();
         }
     };
 
@@ -157,8 +188,44 @@ export default function MuridPage() {
                 )}
             </div>
 
-            {/* Table */}
-            <div className="card overflow-hidden">
+            {/* Mobile Card List (hidden on md+) */}
+            <div className="md:hidden space-y-2">
+                {loading ? (
+                    Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 rounded-2xl skeleton" />)
+                ) : filtered.length === 0 ? (
+                    <div className="card p-10 text-center" style={{ color: 'var(--text-muted)' }}>Tidak ada data</div>
+                ) : filtered.map((s) => (
+                    <div key={s.id} className="card p-4 flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0"
+                            style={{ background: levelColor[s.level || 'General'] || '#F59E0B' }}>
+                            {s.nama[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold truncate" style={{ color: 'var(--text-primary)' }}>{s.nama}</p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="badge text-[10px]" style={{
+                                    background: (levelColor[s.level || ''] || '#F59E0B') + '20',
+                                    color: levelColor[s.level || ''] || '#F59E0B'
+                                }}>{s.level || 'General'}</span>
+                                {s.telepon && <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}><Phone size={11} />{s.telepon}</span>}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => setViewingStudent(s)} className="p-2 rounded-xl" style={{ background: 'var(--bg-secondary)', color: 'var(--info)' }}><Eye size={15} /></button>
+                            <button onClick={() => {
+                                setEditingStudent(s);
+                                setFormData({ nama: s.nama, panggilan: s.panggilan || '', email: s.email || '', telepon: s.telepon || '', level: s.level || 'General', alamat: s.alamat || '', catatan: s.catatan || '', usia: s.usia || '' });
+                                setIsModalOpen(true);
+                            }} className="p-2 rounded-xl" style={{ background: 'var(--bg-secondary)', color: 'var(--primary-dark)' }}><Edit3 size={15} /></button>
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(s.id); }}
+                                className="p-2 rounded-xl" style={{ background: '#FEF2F2', color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Desktop Table (hidden on mobile) */}
+            <div className="hidden md:block card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="table-base">
                         <thead>
@@ -243,12 +310,8 @@ export default function MuridPage() {
                                             }} className="p-1.5 rounded-lg" style={{ color: 'var(--primary-dark)' }}>
                                                 <Edit3 size={16} />
                                             </button>
-                                            <button onClick={async () => {
-                                                if (confirm('Hapus murid ini?')) {
-                                                    await supabase.from('students').delete().eq('id', s.id);
-                                                    fetchStudents();
-                                                }
-                                            }} className="p-1.5 rounded-lg" style={{ color: 'var(--danger)' }}>
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(s.id); }}
+                                                className="p-1.5 rounded-lg" style={{ color: 'var(--danger)' }}>
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>

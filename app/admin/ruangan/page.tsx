@@ -26,12 +26,17 @@ export default function RuanganPage() {
 
     async function handleSimpan(e: React.FormEvent) {
         e.preventDefault();
-        const { error } = await supabase.from("rooms").insert([formData]);
-        if (!error) {
+        try {
+            const { error } = await supabase.from("rooms").insert([formData]);
+            if (error) throw error;
             setIsModalOpen(false);
             setFormData({ nama_ruangan: "", kapasitas: 6, status: "Tersedia", catatan_fasilitas: "" });
+        } catch (err: any) {
+            console.error("Insert error:", err);
+            alert("Gagal menambahkan ruangan:\n" + err.message);
+        } finally {
             fetchRooms();
-        } else alert("Gagal: " + error.message);
+        }
     }
 
     const editFields = [
@@ -42,11 +47,26 @@ export default function RuanganPage() {
     ];
 
     async function handleUpdate(data: any) {
-        await supabase.from("rooms").update({
+        const { error } = await supabase.from("rooms").update({
             nama_ruangan: data.nama_ruangan, kapasitas: data.kapasitas,
             status: data.status, catatan_fasilitas: data.catatan_fasilitas,
         }).eq("id", data.id);
+
+        if (error) throw error;
         fetchRooms();
+    }
+
+    async function handleDelete(id: string, name: string) {
+        if (!confirm(`Hapus ${name}?`)) return;
+        try {
+            const { error } = await supabase.from("rooms").delete().eq("id", id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error("Delete error:", err);
+            alert("Gagal menghapus ruangan:\n" + err.message);
+        } finally {
+            fetchRooms();
+        }
     }
 
     const statusInfo: Record<string, { icon: typeof CheckCircle, bg: string, color: string }> = {
@@ -57,7 +77,7 @@ export default function RuanganPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                     <h1 className="flex items-center gap-2" style={{ fontWeight: 900, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#10B981' }}>
@@ -69,7 +89,7 @@ export default function RuanganPage() {
                         {rooms.filter(r => r.status === 'Tersedia').length} tersedia dari {rooms.length} ruangan
                     </p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+                <button onClick={() => setIsModalOpen(true)} className="btn-primary self-start">
                     <Plus size={18} /> Tambah Ruangan
                 </button>
             </div>
@@ -92,12 +112,8 @@ export default function RuanganPage() {
                                     <div className="flex gap-1">
                                         <button onClick={() => { setSelectedRoom(room); setIsEditModalOpen(true); }}
                                             className="p-1.5 rounded-lg" style={{ color: 'var(--info)' }}><Pencil size={15} /></button>
-                                        <button onClick={async () => {
-                                            if (confirm(`Hapus ${room.nama_ruangan}?`)) {
-                                                await supabase.from("rooms").delete().eq("id", room.id);
-                                                fetchRooms();
-                                            }
-                                        }} className="p-1.5 rounded-lg" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(room.id, room.nama_ruangan); }}
+                                            className="p-1.5 rounded-lg" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                                     </div>
                                 </div>
 

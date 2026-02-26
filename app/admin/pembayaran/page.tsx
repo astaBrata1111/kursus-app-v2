@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import EditModal from "@/app/components/EditModal";
+import ModalPortal from "@/app/components/ModalPortal";
 import {
     CreditCard, Plus, CheckCircle, Clock, Search, Trash2, X, Save,
     User, DollarSign, Calendar, Pencil, Upload, Download, Sparkles,
@@ -67,24 +68,46 @@ export default function PembayaranPage() {
         e.preventDefault();
         if (!formData.student_id) return alert("Pilih murid!");
         const student = students.find(s => s.id === formData.student_id);
-        const { error } = await supabase.from("invoices").insert([{
-            ...formData,
-            level_tagihan: student?.level || "General",
-        }]);
-        if (!error) { setIsModalOpen(false); setFormData(initialForm); loadData(); }
+        try {
+            const { error } = await supabase.from("invoices").insert([{
+                ...formData,
+                level_tagihan: student?.level || "General",
+            }]);
+            if (error) throw error;
+            setIsModalOpen(false);
+            setFormData(initialForm);
+        } catch (err: any) {
+            console.error("Insert error:", err);
+            alert("Gagal membuat tagihan:\n" + err.message);
+        } finally {
+            loadData();
+        }
     }
 
     async function updateStatus(id: string, newStatus: 'Lunas' | 'Belum Bayar') {
-        await supabase.from("invoices").update({
-            status: newStatus,
-            tanggal_bayar: newStatus === "Lunas" ? new Date().toISOString().split('T')[0] : null
-        }).eq("id", id);
-        loadData();
+        try {
+            const { error } = await supabase.from("invoices").update({
+                status: newStatus,
+                tanggal_bayar: newStatus === "Lunas" ? new Date().toISOString().split('T')[0] : null
+            }).eq("id", id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error("Update error:", err);
+            alert("Gagal mengubah status:\n" + err.message);
+        } finally {
+            loadData();
+        }
     }
 
     async function deleteInvoice(id: string) {
-        if (confirm("Hapus invoice ini?")) {
-            await supabase.from("invoices").delete().eq("id", id);
+        if (!confirm("Hapus invoice ini?")) return;
+        try {
+            const { error } = await supabase.from("invoices").delete().eq("id", id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error("Delete error:", err);
+            alert("Gagal menghapus invoice:\n" + err.message);
+        } finally {
             loadData();
         }
     }
@@ -116,10 +139,12 @@ export default function PembayaranPage() {
     ];
 
     async function handleUpdate(data: any) {
-        await supabase.from("invoices").update({
+        const { error } = await supabase.from("invoices").update({
             nominal: data.nominal, status: data.status, bulan: data.bulan, due_date: data.due_date,
             tanggal_bayar: data.status === "Lunas" ? new Date().toISOString().split('T')[0] : null
         }).eq("id", data.id);
+
+        if (error) throw error;
         loadData();
     }
 
@@ -214,8 +239,58 @@ export default function PembayaranPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="card overflow-hidden">
+            {/* Mobile Card List */}
+            <div className="md:hidden space-y-2">
+                {loading ? (
+                    Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 rounded-2xl skeleton" />)
+                ) : filtered.length === 0 ? (
+                    <div className="card p-10 text-center" style={{ color: 'var(--text-muted)' }}>Tidak ada data</div>
+                ) : filtered.map(inv => (
+                    <div key={inv.id} className="card p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
+                                style={{ background: 'var(--primary)' }}>
+                                {(inv.students?.nama || '?')[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-bold truncate" style={{ color: 'var(--text-primary)' }}>{inv.students?.nama}</p>
+                                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{inv.bulan}</p>
+                            </div>
+                            <span className={`badge ${inv.status === 'Lunas' ? 'badge-green' : 'badge-red'}`}>
+                                {inv.status === 'Lunas' ? <CheckCircle size={11} /> : <Clock size={11} />}
+                                {inv.status}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <p className="font-black text-base" style={{ color: 'var(--text-primary)' }}>Rp {inv.nominal.toLocaleString('id-ID')}</p>
+                            <div className="flex items-center gap-1">
+                                {inv.status === 'Belum Bayar' && (
+                                    <button onClick={() => updateStatus(inv.id, 'Lunas')}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                                        style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
+                                        ✓ Lunas
+                                    </button>
+                                )}
+                                <button onClick={() => sendWA(inv)} disabled={wa_sending === inv.id}
+                                    className="p-2 rounded-xl" style={{ background: '#DCFCE7', color: '#25D366' }}>
+                                    <Send size={14} />
+                                </button>
+                                <button onClick={() => { setSelectedInvoice(inv); setIsEditModalOpen(true); }}
+                                    className="p-2 rounded-xl" style={{ background: 'var(--bg-secondary)', color: 'var(--info)' }}>
+                                    <Pencil size={14} />
+                                </button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteInvoice(inv.id); }}
+                                    className="p-2 rounded-xl" style={{ background: '#FEF2F2', color: 'var(--danger)' }}>
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="table-base">
                         <thead>
@@ -286,7 +361,7 @@ export default function PembayaranPage() {
                                                 className="p-1.5 rounded-lg transition" style={{ color: 'var(--info)' }}>
                                                 <Pencil size={16} />
                                             </button>
-                                            <button onClick={() => deleteInvoice(inv.id)}
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteInvoice(inv.id); }}
                                                 className="p-1.5 rounded-lg transition" style={{ color: 'var(--danger)' }}>
                                                 <Trash2 size={16} />
                                             </button>
@@ -301,49 +376,51 @@ export default function PembayaranPage() {
 
             {/* Create Modal */}
             {isModalOpen && (
-                <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setIsModalOpen(false)}>
-                    <div className="modal-content">
-                        <div className="p-5 flex items-center justify-between" style={{ background: 'var(--primary)', color: 'white' }}>
-                            <h2 style={{ fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Buat Invoice Baru
-                            </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="hover:rotate-90 transition-transform">
-                                <X size={22} />
-                            </button>
+                <ModalPortal>
+                    <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setIsModalOpen(false)}>
+                        <div className="modal-content">
+                            <div className="p-5 flex items-center justify-between" style={{ background: 'var(--primary)', color: 'white' }}>
+                                <h2 style={{ fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Buat Invoice Baru
+                                </h2>
+                                <button onClick={() => setIsModalOpen(false)} className="hover:rotate-90 transition-transform">
+                                    <X size={22} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleCreate} className="p-6 space-y-4">
+                                <div className="space-y-1.5">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                        <User size={12} className="inline mr-1" />Pilih Murid
+                                    </label>
+                                    <select required className="input-base"
+                                        value={formData.student_id} onChange={e => setFormData({ ...formData, student_id: e.target.value })}>
+                                        <option value="">-- Pilih Murid --</option>
+                                        {availableStudents.map(s => <option key={s.id} value={s.id}>{s.nama} ({s.level})</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                        <Calendar size={12} className="inline mr-1" />Periode
+                                    </label>
+                                    <select className="input-base"
+                                        value={formData.bulan} onChange={e => setFormData({ ...formData, bulan: e.target.value })}>
+                                        {LIST_BULAN.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                        <DollarSign size={12} className="inline mr-1" />Nominal (Rp)
+                                    </label>
+                                    <input type="number" className="input-base"
+                                        value={formData.nominal} onChange={e => setFormData({ ...formData, nominal: parseInt(e.target.value) })} />
+                                </div>
+                                <button type="submit" className="btn-primary w-full justify-center py-3">
+                                    <Save size={18} /> Simpan Tagihan
+                                </button>
+                            </form>
                         </div>
-                        <form onSubmit={handleCreate} className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                                    <User size={12} className="inline mr-1" />Pilih Murid
-                                </label>
-                                <select required className="input-base"
-                                    value={formData.student_id} onChange={e => setFormData({ ...formData, student_id: e.target.value })}>
-                                    <option value="">-- Pilih Murid --</option>
-                                    {availableStudents.map(s => <option key={s.id} value={s.id}>{s.nama} ({s.level})</option>)}
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                                    <Calendar size={12} className="inline mr-1" />Periode
-                                </label>
-                                <select className="input-base"
-                                    value={formData.bulan} onChange={e => setFormData({ ...formData, bulan: e.target.value })}>
-                                    {LIST_BULAN.map(m => <option key={m} value={m}>{m}</option>)}
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                                    <DollarSign size={12} className="inline mr-1" />Nominal (Rp)
-                                </label>
-                                <input type="number" className="input-base"
-                                    value={formData.nominal} onChange={e => setFormData({ ...formData, nominal: parseInt(e.target.value) })} />
-                            </div>
-                            <button type="submit" className="btn-primary w-full justify-center py-3">
-                                <Save size={18} /> Simpan Tagihan
-                            </button>
-                        </form>
                     </div>
-                </div>
+                </ModalPortal>
             )}
 
             <EditModal

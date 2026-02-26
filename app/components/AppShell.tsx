@@ -106,7 +106,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const [userName, setUserName] = useState('');
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
     const [notifications, setNotifications] = useState(0);
+
+    // Track desktop/mobile breakpoint
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        setIsDesktop(mq.matches);
+        const handler = (e: MediaQueryListEvent) => {
+            setIsDesktop(e.matches);
+            if (e.matches) setMobileOpen(false);
+        };
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     const fetchUserProfile = useCallback(async (userId: string, userEmailFallback: string) => {
         const { data: profile } = await supabase
@@ -131,24 +144,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
     useEffect(() => {
         let mounted = true;
 
-        const init = async () => {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (!mounted) return;
-
-            if (error) {
-                // Clear any corrupted tokens
-                await supabase.auth.signOut().catch(() => { });
-                setHasSession(false);
-                if (pathname !== '/login') router.replace('/login');
-            } else if (session) {
-                setHasSession(true);
-                setUserEmail(session.user.email || '');
-                await fetchUserProfile(session.user.id, session.user.email || '');
-            } else {
+        // Safety timeout: if auth check takes > 8s, stop spinning and redirect to login
+        const safetyTimer = setTimeout(() => {
+            if (mounted) {
+                setLoading(false);
                 setHasSession(false);
                 if (pathname !== '/login') router.replace('/login');
             }
-            setLoading(false);
+        }, 8000);
+
+        const init = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (!mounted) return;
+
+                if (error) {
+                    await supabase.auth.signOut().catch(() => { });
+                    setHasSession(false);
+                    if (pathname !== '/login') router.replace('/login');
+                } else if (session) {
+                    setHasSession(true);
+                    setUserEmail(session.user.email || '');
+                    try {
+                        await fetchUserProfile(session.user.id, session.user.email || '');
+                    } catch {
+                        // Profile fetch failed — still allow access, role will be null
+                    }
+                } else {
+                    setHasSession(false);
+                    if (pathname !== '/login') router.replace('/login');
+                }
+            } catch {
+                if (mounted) {
+                    setHasSession(false);
+                    if (pathname !== '/login') router.replace('/login');
+                }
+            } finally {
+                clearTimeout(safetyTimer);
+                if (mounted) setLoading(false);
+            }
         };
 
         init();
@@ -157,7 +191,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             if (!mounted) return;
             if (session) {
                 setHasSession(true);
-                await fetchUserProfile(session.user.id, session.user.email || '');
+                try { await fetchUserProfile(session.user.id, session.user.email || ''); } catch { }
                 if (pathname === '/login') router.replace('/admin');
             } else {
                 setHasSession(false);
@@ -166,7 +200,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             }
         });
 
-        return () => { mounted = false; subscription.unsubscribe(); };
+        return () => { mounted = false; clearTimeout(safetyTimer); subscription.unsubscribe(); };
     }, [router, pathname, fetchUserProfile]);
 
     const handleLogout = async () => {
@@ -215,7 +249,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     width: sidebarWidth,
                     background: 'var(--bg-sidebar)',
                     borderRight: '1px solid var(--border)',
-                    transform: mobileOpen ? 'translateX(0)' : undefined,
+                    transform: isDesktop ? 'none' : (mobileOpen ? 'translateX(0)' : 'translateX(-100%)'),
                 }}
             >
                 {/* Logo */}

@@ -150,28 +150,30 @@ export default function AbsensiAdminPage() {
                 {sessionStudents.map((student, idx) => {
                     const currentStatus = getStatus(student.id);
                     return (
-                        <div key={student.id} className="flex items-center justify-between p-4"
+                        <div key={student.id} className="p-4"
                             style={{ borderBottom: idx < sessionStudents.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold"
-                                    style={{ background: 'var(--primary)' }}>{student.nama[0]}</div>
-                                <div>
-                                    <p style={{ fontWeight: 700 }}>{student.nama}</p>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{student.level}</p>
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
+                                        style={{ background: 'var(--primary)' }}>{student.nama[0]}</div>
+                                    <div>
+                                        <p style={{ fontWeight: 700 }}>{student.nama}</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{student.level}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex gap-2">
-                                {STATUS_OPTIONS.map(s => (
-                                    <button key={s.value} onClick={() => markAbsensi(student.id, s.value)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                                        style={{
-                                            background: currentStatus === s.value ? s.color : 'var(--bg-secondary)',
-                                            color: currentStatus === s.value ? 'white' : 'var(--text-muted)',
-                                            border: `1.5px solid ${currentStatus === s.value ? s.color : 'var(--border)'}`,
-                                        }}>
-                                        {s.label}
-                                    </button>
-                                ))}
+                                <div className="flex flex-wrap gap-1.5 justify-end">
+                                    {STATUS_OPTIONS.map(s => (
+                                        <button key={s.value} onClick={() => markAbsensi(student.id, s.value)}
+                                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                            style={{
+                                                background: currentStatus === s.value ? s.color : 'var(--bg-secondary)',
+                                                color: currentStatus === s.value ? 'white' : 'var(--text-muted)',
+                                                border: `1.5px solid ${currentStatus === s.value ? s.color : 'var(--border)'}`,
+                                            }}>
+                                            {s.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     );
