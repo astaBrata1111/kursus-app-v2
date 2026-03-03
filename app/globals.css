@@ -39,15 +39,36 @@
   /* amber-200 */
   --border-light: #FEF9EE;
 
-  /* Status */
+  /* ── Status (GEO Hybrid — calm, supportive, never alarming) ── */
+
+  /* Positive / healthy — kept vivid for legibility */
   --success: #16A34A;
   --success-bg: #F0FDF4;
-  --danger: #DC2626;
-  --danger-bg: #FEF2F2;
-  --warning: #D97706;
-  --warning-bg: #FFFBEB;
+
+  /* GEO calm risk — replaces alarming #DC2626 */
+  --danger:     #D66A6A;  /* GEO --color-risk: Calm Red */
+  --danger-bg:  #FDF3F3;
+
+  /* GEO soft amber warning — distinct from brand amber */
+  --warning:    #E5B65C;  /* GEO --color-warning: Soft Amber */
+  --warning-bg: #FEF9EE;
+
+  /* GEO muted green healthy indicator */
+  --healthy:    #6FA67A;  /* GEO --color-healthy: Muted Sage */
+  --healthy-bg: #F0F7F1;
+
   --info: #2563EB;
   --info-bg: #EFF6FF;
+
+  /* ── Student Status Aliases (used by StatusBadge) ── */
+  --status-active-color: #16A34A;
+  --status-active-bg:    #F0FDF4;
+  --status-trial-color:  #2563EB;
+  --status-trial-bg:     #EFF6FF;
+  --status-at-risk-color: #E5B65C;
+  --status-at-risk-bg:   #FEF9EE;
+  --status-dropped-color: #78716C;
+  --status-dropped-bg:   #F5F5F4;
 
   /* Legacy compat */
   --accent: var(--primary);

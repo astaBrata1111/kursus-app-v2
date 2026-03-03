@@ -43,12 +43,12 @@ export default function LoginPage() {
                 if (!profile.is_active) throw new Error('Akun Anda tidak aktif. Hubungi administrator.');
 
                 switch (profile.role) {
+                    case 'owner': router.push('/owner/dashboard'); break;
                     case 'admin': router.push('/admin'); break;
                     case 'teacher': router.push('/teacher/dashboard'); break;
                     case 'student': router.push('/student/dashboard'); break;
                     case 'parent': router.push('/parent/dashboard'); break;
                     default:
-                        // Unknown role — show what role was found so admin can debug
                         throw new Error(`Role "${profile.role}" belum dikonfigurasi. Hubungi administrator.`);
                 }
             }
@@ -192,6 +192,13 @@ export default function LoginPage() {
                                 ⚠️ Isi email/password — akun harus sudah ada di Supabase
                             </p>
                             <div className="grid grid-cols-2 gap-2">
+                                {/* Owner — full width, crown tier */}
+                                <button type="button"
+                                    onClick={() => quickLogin('owner@test.com', 'owner123')}
+                                    className="col-span-2 px-3 py-2.5 rounded-xl text-xs font-bold text-white transition hover:opacity-90 flex items-center justify-center gap-2"
+                                    style={{ background: 'linear-gradient(135deg, #78350F 0%, #92400E 50%, #B45309 100%)' }}>
+                                    👑 Owner (Super Admin) — owner@test.com
+                                </button>
                                 {[
                                     { label: 'Admin', email: 'admin@test.com', pw: 'admin123', color: '#F59E0B' },
                                     { label: 'Teacher', email: 'teacher@test.com', pw: 'teacher123', color: '#3B82F6' },

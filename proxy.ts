@@ -47,7 +47,10 @@ export async function proxy(request: NextRequest) {
         const role = profile?.role;
 
         // Role-based route protection
-        if (path.startsWith('/admin') && role !== 'admin') {
+        if (path.startsWith('/owner') && role !== 'owner') {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
+        if (path.startsWith('/admin') && role !== 'admin' && role !== 'owner') {
             return NextResponse.redirect(new URL(
                 role === 'teacher' ? '/teacher/dashboard' :
                     role === 'student' ? '/student/dashboard' :
@@ -55,22 +58,23 @@ export async function proxy(request: NextRequest) {
                 request.url
             ));
         }
-        if (path.startsWith('/teacher') && role !== 'teacher' && role !== 'admin') {
+        if (path.startsWith('/teacher') && role !== 'teacher' && role !== 'admin' && role !== 'owner') {
             return NextResponse.redirect(new URL('/login', request.url));
         }
-        if (path.startsWith('/student') && role !== 'student' && role !== 'admin') {
+        if (path.startsWith('/student') && role !== 'student' && role !== 'admin' && role !== 'owner') {
             return NextResponse.redirect(new URL('/login', request.url));
         }
-        if (path.startsWith('/parent') && role !== 'parent' && role !== 'admin') {
+        if (path.startsWith('/parent') && role !== 'parent' && role !== 'admin' && role !== 'owner') {
             return NextResponse.redirect(new URL('/login', request.url));
         }
 
         // Root redirect
         if (path === '/' || path === '/login') {
-            const dest = role === 'admin' ? '/admin' :
-                role === 'teacher' ? '/teacher/dashboard' :
-                    role === 'student' ? '/student/dashboard' :
-                        role === 'parent' ? '/parent/dashboard' : '/login';
+            const dest = role === 'owner' ? '/owner/dashboard' :
+                role === 'admin' ? '/admin' :
+                    role === 'teacher' ? '/teacher/dashboard' :
+                        role === 'student' ? '/student/dashboard' :
+                            role === 'parent' ? '/parent/dashboard' : '/login';
             return NextResponse.redirect(new URL(dest, request.url));
         }
     }

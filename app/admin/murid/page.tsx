@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
     Users, Plus, Search, Trash2, X, Save, Eye, Edit3,
     FileSpreadsheet, Upload, Phone, Baby, MapPin, Mail,
-    CheckSquare, Square, Trash, FileText
+    CheckSquare, Square, Trash
 } from "lucide-react";
 import Papa from "papaparse";
+import { useSettings } from "@/app/components/SettingsProvider";
 
 interface Student {
     id: string; nama: string; panggilan?: string; email?: string;
@@ -16,6 +18,7 @@ interface Student {
 }
 
 export default function MuridPage() {
+    const router = useRouter();
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +26,7 @@ export default function MuridPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
+    const { t } = useSettings();
 
     const [formData, setFormData] = useState({
         nama: "", email: "", telepon: "", level: "General",
@@ -108,7 +112,7 @@ export default function MuridPage() {
     };
 
     const filtered = students.filter(s =>
-        s.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.nama || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
         (s.telepon || '').includes(searchTerm)
     );
 
@@ -128,7 +132,7 @@ export default function MuridPage() {
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#10B981' }}>
                             <Users size={22} />
                         </div>
-                        Database Murid
+                        {t('nav_data_murid') || 'Database Murid'}
                     </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
                         {students.length} murid terdaftar
@@ -167,7 +171,7 @@ export default function MuridPage() {
                     <button onClick={handleExportCSV} className="btn-ghost">
                         <FileSpreadsheet size={16} /> Export
                     </button>
-                    <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+                    <button onClick={() => router.push('/register?from=admin')} className="btn-primary">
                         <Plus size={18} /> Tambah Murid
                     </button>
                 </div>
@@ -198,7 +202,7 @@ export default function MuridPage() {
                     <div key={s.id} className="card p-4 flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0"
                             style={{ background: levelColor[s.level || 'General'] || '#F59E0B' }}>
-                            {s.nama[0]}
+                            {(s.nama || '?')[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="font-bold truncate" style={{ color: 'var(--text-primary)' }}>{s.nama}</p>
@@ -270,7 +274,7 @@ export default function MuridPage() {
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold"
                                                 style={{ background: levelColor[s.level || 'General'] || '#F59E0B' }}>
-                                                {s.nama[0]}
+                                                {(s.nama || '?')[0].toUpperCase()}
                                             </div>
                                             <div>
                                                 <p style={{ fontWeight: 700 }}>{s.nama}</p>

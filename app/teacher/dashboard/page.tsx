@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Calendar, UserCheck, TrendingUp, Clock, CheckCircle, X } from "lucide-react";
 import CalendarWidget from "@/app/components/CalendarWidget";
+import { useSettings } from "@/app/components/SettingsProvider";
 
 export default function TeacherDashboard() {
     const [sessions, setSessions] = useState<any[]>([]);
@@ -11,6 +12,9 @@ export default function TeacherDashboard() {
     const [loading, setLoading] = useState(true);
     const [teacherName, setTeacherName] = useState('');
     const [stats, setStats] = useState({ totalKelas: 0, kelihadir: 0, kelasMingguIni: 0 });
+    const { t, settings } = useSettings();
+    const locale = settings?.language === 'zh' ? 'zh-CN' : settings?.language === 'en' ? 'en-US' : 'id-ID';
+
 
     useEffect(() => {
         (async () => {
@@ -35,7 +39,7 @@ export default function TeacherDashboard() {
                 setToday(s?.filter((x: any) => x.hari === todayName).sort((a: any, b: any) => a.jam_mulai.localeCompare(b.jam_mulai)) || []);
 
                 // Stats
-                const { count: absCnt } = await supabase.from('absensi').select('*', { count: 'exact', head: true }).in('session_id', s?.map((x: any) => x.id) || []).eq('status', 'hadir');
+                const { count: absCnt } = await supabase.from('absensi').select('*', { count: 'exact', head: true }).in('session_id', s?.map((x: any) => x.id) || []).eq('status', 'Hadir');
                 setStats({ totalKelas: s?.length || 0, kelihadir: absCnt || 0, kelasMingguIni: todaySessions.length });
             }
             setLoading(false);
@@ -43,25 +47,29 @@ export default function TeacherDashboard() {
     }, []);
 
     const today = new Date();
-    const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const dayNamesId = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const dayNamesEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayNamesZh = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    const currentDayNames = settings?.language === 'en' ? dayNamesEn : settings?.language === 'zh' ? dayNamesZh : dayNamesId;
+
 
     return (
         <div className="space-y-6">
             <div>
                 <h1 style={{ fontWeight: 900, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
-                    Selamat Datang, {teacherName}! 👩‍🏫
+                    {t('welcome_message').replace('{name}', teacherName)} 👩‍🏫
                 </h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                    {today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {today.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 {[
-                    { label: 'Total Kelas', val: stats.totalKelas, icon: <Calendar size={20} />, color: '#8B5CF6' },
-                    { label: 'Murid Hadir (Total)', val: stats.kelihadir, icon: <UserCheck size={20} />, color: '#10B981' },
-                    { label: 'Kelas Minggu Ini', val: stats.kelasMingguIni, icon: <TrendingUp size={20} />, color: '#F59E0B' },
+                    { label: t('total_classes'), val: stats.totalKelas, icon: <Calendar size={20} />, color: '#8B5CF6' },
+                    { label: t('students_present_total'), val: stats.kelihadir, icon: <UserCheck size={20} />, color: '#10B981' },
+                    { label: t('classes_this_week'), val: stats.kelasMingguIni, icon: <TrendingUp size={20} />, color: '#F59E0B' },
                 ].map(s => (
                     <div key={s.label} className="card p-5">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white mb-3" style={{ background: s.color }}>{s.icon}</div>
@@ -76,7 +84,7 @@ export default function TeacherDashboard() {
                 <div className="xl:col-span-2 card overflow-hidden">
                     <div className="p-5 border-b" style={{ borderColor: 'var(--border-light)' }}>
                         <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
-                            Kelas Hari Ini — {dayNames[today.getDay()]}
+                            {t('classes_today')} — {currentDayNames[today.getDay()]}
                         </h3>
                     </div>
                     {loading ? (
@@ -86,7 +94,7 @@ export default function TeacherDashboard() {
                     ) : todaySessions.length === 0 ? (
                         <div className="p-12 text-center">
                             <CheckCircle size={36} className="mx-auto mb-3" style={{ color: '#D1FAE5' }} />
-                            <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Tidak ada kelas hari ini</p>
+                            <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('no_classes_today')}</p>
                         </div>
                     ) : (
                         <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
@@ -102,10 +110,10 @@ export default function TeacherDashboard() {
                                     <div className="flex-1">
                                         <p style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{s.nama_kelas}</p>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {s.rooms?.nama_ruangan || 'Ruangan belum ditentukan'}
+                                            {s.rooms?.nama_ruangan || t('room_not_assigned')}
                                         </p>
                                     </div>
-                                    <span className="badge badge-amber">{s.jenis_kelas || 'General'}</span>
+                                    <span className="badge badge-amber">{s.jenis_kelas || t('badge_general')}</span>
                                 </div>
                             ))}
                         </div>
@@ -118,10 +126,10 @@ export default function TeacherDashboard() {
             {/* All schedule */}
             <div className="card overflow-hidden">
                 <div className="p-5 border-b" style={{ borderColor: 'var(--border-light)' }}>
-                    <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Semua Jadwal Mengajar</h3>
+                    <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{t('all_teaching_schedules')}</h3>
                 </div>
                 <table className="table-base">
-                    <thead><tr><th>Kelas</th><th>Hari</th><th>Jam</th><th>Ruangan</th><th>Jenis</th></tr></thead>
+                    <thead><tr><th>{t('col_class')}</th><th>{t('col_day')}</th><th>{t('col_time')}</th><th>{t('col_room')}</th><th>{t('col_type')}</th></tr></thead>
                     <tbody>
                         {loading ? (
                             Array.from({ length: 3 }).map((_, i) => <tr key={i}>{Array.from({ length: 5 }).map((_, j) => <td key={j}><div className="h-4 skeleton rounded" /></td>)}</tr>)
@@ -131,7 +139,7 @@ export default function TeacherDashboard() {
                                 <td>{s.hari}</td>
                                 <td><div className="flex items-center gap-1 text-sm" style={{ color: 'var(--text-muted)' }}><Clock size={13} />{s.jam_mulai.slice(0, 5)}-{s.jam_selesai.slice(0, 5)}</div></td>
                                 <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{s.rooms?.nama_ruangan || '—'}</td>
-                                <td><span className="badge badge-amber">{s.jenis_kelas || 'General'}</span></td>
+                                <td><span className="badge badge-amber">{s.jenis_kelas || t('badge_general')}</span></td>
                             </tr>
                         ))}
                     </tbody>
